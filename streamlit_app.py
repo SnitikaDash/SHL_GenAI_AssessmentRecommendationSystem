@@ -3,31 +3,50 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Set Streamlit page config
-st.set_page_config(page_title="SHL Assessment Recommendation System", layout="centered")
+st.set_page_config(page_title="SHL Assessment Recommender", layout="centered")
+
+st.title("🔍 SHL Assessment Recommendation System")
+st.write("Enter a job description or hiring need to get recommended SHL assessments.")
 
 # Load CSV
-df = pd.read_csv("shl_assessments.csv")
+try:
+    df = pd.read_csv("shl_assessments.csv")
+    st.success("✅ CSV loaded successfully.")
+except Exception as e:
+    st.error(f"❌ Failed to load CSV: {e}")
+    st.stop()
 
-# Safely combine title and description
+# Show column names
+st.write("**CSV Columns:**", df.columns.tolist())
+
+# Clean up missing values
 df["title"] = df["title"].fillna("").astype(str)
 df["description"] = df["description"].fillna("").astype(str)
 df["combined"] = (df["title"] + " " + df["description"]).str.strip()
 
-# Drop rows where combined text is empty
+# Show first few combined rows for debugging
+st.write("**First 5 Combined Entries:**", df["combined"].head())
+
+# Remove empty combined rows
 df = df[df["combined"].str.strip() != ""]
 
-# Vectorize
-vectorizer = TfidfVectorizer(stop_words="english")
-X = vectorizer.fit_transform(df["combined"])
+# Final check before vectorizing
+if df["combined"].empty:
+    st.error("❌ All 'combined' text fields are empty. Please check your CSV content.")
+    st.stop()
 
-# Streamlit UI
-st.title("🔍 SHL Assessment Recommendation System")
-st.write("Enter a job description or hiring need, and get the most relevant SHL assessments.")
+# Vectorization
+try:
+    vectorizer = TfidfVectorizer(stop_words="english")
+    X = vectorizer.fit_transform(df["combined"])
+    st.success("✅ TF-IDF vectorization successful.")
+except Exception as e:
+    st.error(f"❌ Vectorization failed: {e}")
+    st.stop()
 
+# Input
 query = st.text_area("📝 Enter Job Description / Hiring Requirement:")
 
-# Recommendation logic
 def get_recommendations(query, df, X, vectorizer, top_n=5):
     if not query.strip():
         return pd.DataFrame()
@@ -36,18 +55,17 @@ def get_recommendations(query, df, X, vectorizer, top_n=5):
     top_indices = similarity.argsort()[::-1][:top_n]
     return df.iloc[top_indices].copy()
 
-# Handle submission
+# Button
 if st.button("🔍 Get Recommendations"):
     results = get_recommendations(query, df, X, vectorizer)
-
     if results.empty:
-        st.warning("Please enter a valid job description.")
+        st.warning("No results found.")
     else:
         st.markdown("## 🎯 Top Recommended Assessments")
         for _, row in results.iterrows():
             st.markdown(f"### [{row['title']}]({row['url']})" if pd.notna(row['url']) else f"### {row['title']}")
-            st.markdown(f"**Test Type:** {row['test_type'] if pd.notna(row['test_type']) else 'N/A'}")
-            st.markdown(f"**Duration:** {str(row['duration_minutes']) + ' mins' if pd.notna(row['duration_minutes']) else 'N/A'}")
-            st.markdown(f"**Supports Remote Testing:** {row['remote_testing_support'] if pd.notna(row['remote_testing_support']) else 'N/A'}")
-            st.markdown(f"**Adaptive/IRT:** {row['adaptive_irt_support'] if pd.notna(row['adaptive_irt_support']) else 'N/A'}")
+            st.markdown(f"**Test Type:** {row.get('test_type', 'N/A')}")
+            st.markdown(f"**Duration:** {row.get('duration_minutes', 'N/A')} mins")
+            st.markdown(f"**Supports Remote Testing:** {row.get('remote_testing_support', 'N/A')}")
+            st.markdown(f"**Adaptive/IRT:** {row.get('adaptive_irt_support', 'N/A')}")
             st.markdown("---")

@@ -50,3 +50,6 @@ if query:
         st.write(f"**Supports Remote Testing:** {remote}")
         st.write(f"**Adaptive/IRT:** {adaptive}")
         st.markdown("---")
+
+st.write("🧾 Columns in DataFrame:", df.columns.tolist())
+

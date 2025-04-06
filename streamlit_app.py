@@ -1,28 +1,27 @@
 import streamlit as st
 import pandas as pd
-import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import pickle
 
-# Load the data and vectorizer
-df = pd.read_pickle("df.pkl")
-X = pickle.load(open("X.pkl", "rb"))
-vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+# Load the data
+df = pd.read_csv("shl_assessments.csv")
 
-# Show columns for debugging (you can remove this line later)
-st.write("🧾 Columns in DataFrame:", df.columns.tolist())
+# Combine text fields to vectorize
+df["combined"] = df["title"].fillna('') + " " + df["description"].fillna('')
 
-# Function to get recommendations
+# Vectorize
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(df["combined"])
+
 def get_recommendations(query, df, X, vectorizer, top_n=5):
     query_vec = vectorizer.transform([query])
     similarity = cosine_similarity(query_vec, X).flatten()
-    st.write("Similarity Scores:", similarity)
+    
+    if similarity.max() == 0:
+        return pd.DataFrame()  # No similar assessments found
 
     top_indices = similarity.argsort()[::-1][:top_n]
-    st.write("Top Indices:", top_indices)
-
-    # Avoid index errors
-    top_indices = [i for i in top_indices if i < len(df)]
     recommendations = df.iloc[top_indices].copy()
     return recommendations
 
@@ -34,22 +33,22 @@ query = st.text_area("📝 Enter Job Description / Hiring Requirement:")
 
 if query:
     recommendations = get_recommendations(query, df, X, vectorizer)
+    
+    if recommendations.empty:
+        st.warning("❌ No matching assessments found. Try a different query.")
+    else:
+        st.markdown("## 🎯 Top Recommended Assessments")
+        for _, row in recommendations.iterrows():
+            title = row.get("title", "Unnamed Assessment")
+            url = row.get("url", "#")
+            duration = row.get("duration_minutes", "N/A")
+            remote = row.get("remote_testing_support", "N/A")
+            adaptive = row.get("adaptive_irt_support", "N/A")
+            test_type = row.get("test_type", "N/A")
 
-    st.markdown("## 🎯 Top Recommended Assessments")
-    for _, row in recommendations.iterrows():
-        name = row.get('Assessment Name', 'Unnamed Assessment')
-        url = row.get('URL', '#')
-        test_type = row.get('Test Type', 'N/A')
-        duration = row.get('Duration', 'N/A')
-        remote = row.get('Remote Testing Support', 'N/A')
-        adaptive = row.get('Adaptive/IRT', 'N/A')
-
-        st.markdown(f"### [{name}]({url})")
-        st.write(f"**Test Type:** {test_type}")
-        st.write(f"**Duration:** {duration}")
-        st.write(f"**Supports Remote Testing:** {remote}")
-        st.write(f"**Adaptive/IRT:** {adaptive}")
-        st.markdown("---")
-
-st.write("🧾 Columns in DataFrame:", df.columns.tolist())
-
+            st.markdown(f"### [{title}]({url})")
+            st.markdown(f"- **Test Type**: {test_type}")
+            st.markdown(f"- **Duration**: {duration} minutes")
+            st.markdown(f"- **Supports Remote Testing**: {remote}")
+            st.markdown(f"- **Adaptive/IRT**: {adaptive}")
+            st.markdown("---")

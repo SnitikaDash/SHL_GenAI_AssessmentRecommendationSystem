@@ -8,60 +8,42 @@ df = pickle.load(open("df.pkl", "rb"))
 X = pickle.load(open("X.pkl", "rb"))
 vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 
-# Streamlit App
 st.set_page_config(page_title="SHL Assessment Recommender", layout="wide")
 
 st.title("🔍 SHL Assessment Recommendation System")
 st.markdown("Enter a job description or hiring need, and get the most relevant SHL assessments.")
 
-# Print column names to debug
-st.write("Columns in DataFrame:", df.columns)
-
-# Input text box
 query = st.text_area("📝 Enter Job Description / Hiring Requirement:")
 
 def get_recommendations(query, df, X, vectorizer):
-    if query.strip() == "":
-        st.warning("Please enter a valid job description.")
-        return pd.DataFrame()  # Return an empty DataFrame if no query is entered
-    
-    # Vectorize the input query
     query_vec = vectorizer.transform([query])
-
-    # Compute cosine similarity
     similarity_scores = cosine_similarity(query_vec, X).flatten()
-    top_indices = similarity_scores.argsort()[-10:][::-1]  # Top 10
-    
-    # Debugging: Print the similarity scores and top indices
-    st.write("Similarity Scores:", similarity_scores)
-    st.write("Top Indices:", top_indices)
 
-    # Prepare results
+    # Get only valid top indices that exist in df
+    top_indices = similarity_scores.argsort()[::-1]
+    top_indices = [i for i in top_indices if i < len(df)][:10]
+
     recommendations = df.iloc[top_indices].copy()
     recommendations["Similarity Score"] = similarity_scores[top_indices]
-    
-    if recommendations.empty:
-        st.write("No recommendations found.")
-    else:
-        st.subheader("🎯 Top Recommended Assessments")
-        for idx, row in recommendations.iterrows():
-            # Check if the necessary columns exist
-            assessment_name = row.get('Assessment Name', 'N/A')
-            url = row.get('URL', 'N/A')
-            test_type = row.get('Test Type', 'N/A')
-            duration = row.get('Duration', 'N/A')
-            remote_testing = row.get('Supports Remote Testing', 'N/A')
-            adaptive_irt = row.get('Adaptive/IRT', 'N/A')
+    return recommendations
 
-            # Display the recommendation
-            st.markdown(f"### [{assessment_name}]({url})")
-            st.write(f"**Test Type:** {test_type}")
-            st.write(f"**Duration:** {duration}")
-            st.write(f"**Supports Remote Testing:** {remote_testing}")
-            st.write(f"**Adaptive/IRT:** {adaptive_irt}")
-            st.progress(min(row['Similarity Score'], 1.0))
-            st.markdown("---")
-
-# Get recommendations when button is pressed
 if st.button("🔎 Recommend Assessments"):
-    recommendations = get_recommendations(query, df, X, vectorizer)
+    if not query.strip():
+        st.warning("Please enter a valid job description.")
+    else:
+        try:
+            recommendations = get_recommendations(query, df, X, vectorizer)
+            if recommendations.empty:
+                st.info("No relevant assessments found. Please try a different query.")
+            else:
+                st.subheader("🎯 Top Recommended Assessments")
+                for _, row in recommendations.iterrows():
+                    st.markdown(f"### [{row.get('Assessment Name', 'Unnamed Assessment')}]({row.get('URL', '#')})")
+                    st.write(f"**Test Type:** {row.get('Test Type', 'N/A')}")
+                    st.write(f"**Duration:** {row.get('Duration', 'N/A')}")
+                    st.write(f"**Supports Remote Testing:** {row.get('Supports Remote Testing', 'N/A')}")
+                    st.write(f"**Adaptive/IRT:** {row.get('Adaptive/IRT', 'N/A')}")
+                    st.progress(min(row.get("Similarity Score", 0), 1.0))
+                    st.markdown("---")
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")

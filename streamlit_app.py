@@ -12,23 +12,20 @@ st.set_page_config(
 
 # App Title
 st.title("🔍 SHL Assessment Recommendation System")
-st.markdown("Welcome! Enter a job description or hiring need, and get the most relevant SHL assessments tailored to your query.")
+st.markdown("Enter a job description or hiring need, and get the most relevant SHL assessments.")
 
-st.divider()
-
-# Load Pre-trained Files
+# Load Pre-trained Files (silently)
 try:
     df = pickle.load(open("df.pkl", "rb"))
     X = pickle.load(open("X.pkl", "rb"))
     vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-    st.success("✅ Assessment data loaded successfully.")
 except Exception as e:
     st.error(f"❌ Error loading data: {e}")
     st.stop()
 
 # Input Section
-st.markdown("### 📝 Enter Job Description or Hiring Requirement:")
-query = st.text_area("Describe the role, skills, or needs for which you want assessment recommendations:")
+st.markdown("### 📝 Job Description / Hiring Requirement")
+query = st.text_area("Describe the role, skills, or requirements:")
 
 # Recommendation Logic
 def get_recommendations(query, df, X, vectorizer):

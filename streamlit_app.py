@@ -6,39 +6,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Set page config
 st.set_page_config(page_title="SHL Assessment Recommender", layout="wide")
 
-# Stylish CSS for background + transparent container
+# Clean CSS – only removes top white padding/box
 st.markdown("""
     <style>
-    /* Full-page background */
-    body {
-        background-image: url('https://images.unsplash.com/photo-1522075469751-3a6694fb2f61');
-        background-size: cover;
-        background-attachment: fixed;
-        background-repeat: no-repeat;
-        background-position: center;
-        font-family: 'Segoe UI', sans-serif;
-    }
-
-    /* Main content container */
-    .reportview-container .main {
-        background-color: rgba(255, 255, 255, 0.88);
-        padding: 2rem;
-        border-radius: 15px;
-        margin-top: 40px;
-    }
-
-    /* Heading colors */
-    h1, h2, h3 {
-        color: #0b2545;
-    }
-
-    /* Button styling */
-    .stButton button {
-        background-color: #1a73e8;
-        color: white;
-        font-weight: bold;
-        border-radius: 8px;
-        padding: 10px 16px;
+    /* Remove top white space */
+    .block-container {
+        padding-top: 2rem;
     }
     </style>
 """, unsafe_allow_html=True)

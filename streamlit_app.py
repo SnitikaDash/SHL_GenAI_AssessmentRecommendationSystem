@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Set page config and background
 st.set_page_config(page_title="SHL Assessment Recommender", layout="wide")
 
+# Set a light background image using HTML/CSS
 page_bg_img = '''
 <style>
 body {
@@ -13,9 +14,6 @@ body {
     background-size: cover;
     background-attachment: fixed;
     background-repeat: no-repeat;
-}
-.block-container {
-    padding-top: 1rem;
 }
 .main {
     background-color: rgba(255, 255, 255, 0.8);
@@ -69,7 +67,7 @@ if st.button("🔎 Recommend Assessments"):
                 st.subheader("🎯 Top Recommended Assessments")
                 for _, row in recommendations.iterrows():
                     st.markdown(f"### [{row.get('Assessment Name', 'Unnamed Assessment')}]({row.get('URL', '#')})")
-                    st.write(f"**Test Type:** {row.get('Test Type', 'N/A')}") 
+                    st.write(f"**Test Type:** {row.get('Test Type', 'N/A')}")
                     st.write(f"**Duration:** {row.get('Duration', 'N/A')}")
                     st.write(f"**Supports Remote Testing:** {row.get('Supports Remote Testing', 'N/A')}")
                     st.write(f"**Adaptive/IRT:** {row.get('Adaptive/IRT', 'N/A')}")

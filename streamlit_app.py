@@ -1,71 +1,49 @@
 import streamlit as st
+import pickle
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.set_page_config(page_title="SHL Assessment Recommender", layout="centered")
+# Load pre-trained files
+df = pickle.load(open("df.pkl", "rb"))
+X = pickle.load(open("X.pkl", "rb"))
+vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+
+st.set_page_config(page_title="SHL Assessment Recommender", layout="wide")
 
 st.title("🔍 SHL Assessment Recommendation System")
-st.write("Enter a job description or hiring need to get recommended SHL assessments.")
+st.markdown("Enter a job description or hiring need, and get the most relevant SHL assessments.")
 
-# Load CSV
-try:
-    df = pd.read_csv("shl_assessments.csv")
-    st.success("✅ CSV loaded successfully.")
-except Exception as e:
-    st.error(f"❌ Failed to load CSV: {e}")
-    st.stop()
-
-# Show column names
-st.write("**CSV Columns:**", df.columns.tolist())
-
-# Clean up missing values
-df["title"] = df["title"].fillna("").astype(str)
-df["description"] = df["description"].fillna("").astype(str)
-df["combined"] = (df["title"] + " " + df["description"]).str.strip()
-
-# Show first few combined rows for debugging
-st.write("**First 5 Combined Entries:**", df["combined"].head())
-
-# Remove empty combined rows
-df = df[df["combined"].str.strip() != ""]
-
-# Final check before vectorizing
-if df["combined"].empty:
-    st.error("❌ All 'combined' text fields are empty. Please check your CSV content.")
-    st.stop()
-
-# Vectorization
-try:
-    vectorizer = TfidfVectorizer(stop_words="english")
-    X = vectorizer.fit_transform(df["combined"])
-    st.success("✅ TF-IDF vectorization successful.")
-except Exception as e:
-    st.error(f"❌ Vectorization failed: {e}")
-    st.stop()
-
-# Input
 query = st.text_area("📝 Enter Job Description / Hiring Requirement:")
 
-def get_recommendations(query, df, X, vectorizer, top_n=5):
-    if not query.strip():
-        return pd.DataFrame()
+def get_recommendations(query, df, X, vectorizer):
     query_vec = vectorizer.transform([query])
-    similarity = cosine_similarity(query_vec, X).flatten()
-    top_indices = similarity.argsort()[::-1][:top_n]
-    return df.iloc[top_indices].copy()
+    similarity_scores = cosine_similarity(query_vec, X).flatten()
 
-# Button
-if st.button("🔍 Get Recommendations"):
-    results = get_recommendations(query, df, X, vectorizer)
-    if results.empty:
-        st.warning("No results found.")
+    # Get only valid top indices that exist in df
+    top_indices = similarity_scores.argsort()[::-1]
+    top_indices = [i for i in top_indices if i < len(df)][:10]
+
+    recommendations = df.iloc[top_indices].copy()
+    recommendations["Similarity Score"] = similarity_scores[top_indices]
+    return recommendations
+
+if st.button("🔎 Recommend Assessments"):
+    if not query.strip():
+        st.warning("Please enter a valid job description.")
     else:
-        st.markdown("## 🎯 Top Recommended Assessments")
-        for _, row in results.iterrows():
-            st.markdown(f"### [{row['title']}]({row['url']})" if pd.notna(row['url']) else f"### {row['title']}")
-            st.markdown(f"**Test Type:** {row.get('test_type', 'N/A')}")
-            st.markdown(f"**Duration:** {row.get('duration_minutes', 'N/A')} mins")
-            st.markdown(f"**Supports Remote Testing:** {row.get('remote_testing_support', 'N/A')}")
-            st.markdown(f"**Adaptive/IRT:** {row.get('adaptive_irt_support', 'N/A')}")
-            st.markdown("---")
+        try:
+            recommendations = get_recommendations(query, df, X, vectorizer)
+            if recommendations.empty:
+                st.info("No relevant assessments found. Please try a different query.")
+            else:
+                st.subheader("🎯 Top Recommended Assessments")
+                for _, row in recommendations.iterrows():
+                    st.markdown(f"### [{row.get('Assessment Name', 'Unnamed Assessment')}]({row.get('URL', '#')})")
+                    st.write(f"**Test Type:** {row.get('Test Type', 'N/A')}")
+                    st.write(f"**Duration:** {row.get('Duration', 'N/A')}")
+                    st.write(f"**Supports Remote Testing:** {row.get('Supports Remote Testing', 'N/A')}")
+                    st.write(f"**Adaptive/IRT:** {row.get('Adaptive/IRT', 'N/A')}")
+                    st.progress(min(row.get("Similarity Score", 0), 1.0))
+                    st.markdown("---")
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")

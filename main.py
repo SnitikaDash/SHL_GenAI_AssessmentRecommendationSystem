@@ -21,6 +21,9 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+if not os.path.exists("shl_sample_100_assessments.csv"):
+    logger.error("❌ CSV file not found!")
+
 # ✅ Try to load the CSV file
 try:
     df = pd.read_csv("shl_sample_100_assessments.csv", encoding="utf-8")

@@ -1,16 +1,6 @@
 import streamlit as st
 import requests  # ✅ Required for backend API call
 
-# ❌ These are no longer needed due to backend integration
-# import pickle
-# import pandas as pd
-# from sklearn.metrics.pairwise import cosine_similarity
-
-# ❌ Previously used to load ML models locally, but now handled by the FastAPI backend
-# df = pickle.load(open("df.pkl", "rb"))
-# X = pickle.load(open("X.pkl", "rb"))
-# vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-
 # Page setup
 st.set_page_config(page_title="SHL Assessment Recommender", layout="centered")
 st.markdown("""
@@ -59,4 +49,13 @@ if st.button("🔎 Recommend Assessments"):
                     st.subheader("🎯 Top Recommended Assessments")
                     for row in recommendations:
                         st.markdown(f"### 🔗 [{row.get('Assessment Name', 'Unnamed Assessment')}]({row.get('URL', '#')})")
-                        st.markdown
+                        st.markdown(f"- **Duration**: {row.get('Duration', 'N/A')}  \n"
+                                    f"- **Remote Test**: {row.get('Remote Test Support', 'No')}  \n"
+                                    f"- **Adaptive/IRT**: {row.get('Adaptive/IRT', 'No')}  \n"
+                                    f"- **Type**: {row.get('Test Type', 'N/A')}")
+            else:
+                st.error(f"🚫 Error: {response.status_code} - Could not fetch recommendations.")
+        except Exception as e:
+            st.error(f"Something went wrong while contacting the backend: {e}")
+
+st.markdown("</div>", unsafe_allow_html=True)

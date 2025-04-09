@@ -7,10 +7,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
 
-# CORS setup to allow frontend access
+# CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,24 +21,24 @@ df = pickle.load(open("df.pkl", "rb"))
 X = pickle.load(open("X.pkl", "rb"))
 vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 
-# Health check endpoint
+# Health check
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "ok"}
 
-# Request model for /recommend
-class QueryRequest(BaseModel):
+# Define input model for /recommend
+class QueryModel(BaseModel):
     query: str
 
-# Recommendation endpoint
+# Recommend route using JSON body
 @app.post("/recommend")
-def recommend(data: QueryRequest):
-    query = data.query
+def recommend(payload: QueryModel):
+    query = payload.query
     query_vec = vectorizer.transform([query])
     scores = cosine_similarity(query_vec, X).flatten()
     top_indices = scores.argsort()[::-1][:10]
-    
     results = []
+
     for idx in top_indices:
         item = df.iloc[idx]
         results.append({

@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pickle
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
@@ -16,21 +16,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load data and models
-df = pickle.load(open("df.pkl", "rb"))
-X = pickle.load(open("X.pkl", "rb"))
-vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+# ✅ Load the CSV file
+df = pd.read_csv("shl_sample_100_assessments.csv")
 
-# Health check
+# ✅ Combine title and description into a single text field for vectorization
+df["combined_text"] = df["title"].fillna('') + " " + df["description"].fillna('')
+
+# ✅ Create vectorizer and transform combined text
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(df["combined_text"])
+
+# Health check route
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-# Define input model for /recommend
+# Input model for /recommend
 class QueryModel(BaseModel):
     query: str
 
-# Recommend route using JSON body
+# Recommendation endpoint
 @app.post("/recommend")
 def recommend(payload: QueryModel):
     query = payload.query
@@ -42,12 +47,12 @@ def recommend(payload: QueryModel):
     for idx in top_indices:
         item = df.iloc[idx]
         results.append({
-            "Assessment Name": item.get("Assessment Name"),
-            "URL": item.get("URL"),
-            "Test Type": item.get("Test Type"),
-            "Duration": item.get("Duration"),
-            "Supports Remote Testing": item.get("Supports Remote Testing"),
-            "Adaptive/IRT": item.get("Adaptive/IRT"),
+            "Assessment Name": item.get("title"),
+            "URL": item.get("url"),
+            "Test Type": item.get("test_type"),
+            "Duration": item.get("duration_minutes"),
+            "Supports Remote Testing": item.get("remote_testing_support"),
+            "Adaptive/IRT": item.get("adaptive_irt_support"),
             "Similarity Score": float(scores[idx])
         })
 

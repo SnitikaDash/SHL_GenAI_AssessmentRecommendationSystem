@@ -56,7 +56,7 @@ if st.button("🔎 Recommend Assessments"):
     else:
         try:
             # ✅ Send query to FastAPI backend
-            backend_url = "https://your-backend-name.up.railway.app/recommend"  # 🔁 Replace with your actual URL
+            backend_url = "https://shlgenaiassessmentrecommendati-production.up.railway.app/" 
             response = requests.post(backend_url, params={"query": query})
 
             if response.status_code == 200:
